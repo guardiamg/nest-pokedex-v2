@@ -1,21 +1,29 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { CreatePokemonDto } from './dto/create-pokemon.dto.js';
 import { UpdatePokemonDto } from './dto/update-pokemon.dto.js';
 import { isValidObjectId, Model } from 'mongoose';
 import { Pokemon } from './entities/pokemon.entity.js';
 import { InjectModel } from '@nestjs/mongoose';
 import { handleExceptions } from '../common/utils/utils.js';
+import { paginationDto } from '../common/dtos/paginatio.dto.js';
 
 @Injectable()
 export class PokemonService {
 
+  private readonly defaultLimit : number;
+
   constructor(
     @InjectModel(Pokemon.name)
-    private readonly pokemonModel: Model<Pokemon>
-  ) {}
+    private readonly pokemonModel: Model<Pokemon>,
+    private readonly configService: ConfigService
+  ) {
+    this.defaultLimit = configService.get<number>('defaultLimit')!;
+  }
 
-  findAll() {
-    return this.pokemonModel.find();
+  findAll(paginationDto : paginationDto) {
+    const { limit = this.defaultLimit, offset = 0 } = paginationDto;
+    return this.pokemonModel.find().limit(limit).skip(offset).sort({ no : 1 }).select('-__v');
   }
 
   async findOne(term: string) {
@@ -24,8 +32,6 @@ export class PokemonService {
       ...(!isNaN(+term) ? [{ no : +term }] : []),
       ...(isValidObjectId(term) ? [{ _id : term }] : []),
     ]
-
-    console.info('filter', filters);
     const pokemon = await this.pokemonModel.findOne({ $or: filters });
     if (!pokemon) throw new NotFoundException(`Pokemon with id, name or no ${ term } not found`);
 

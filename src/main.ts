@@ -10,7 +10,11 @@ async function bootstrap() {
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
-      forbidNonWhitelisted: true
+      forbidNonWhitelisted: true,
+      transform: true, // transforma los datos de la request a los dtos
+      transformOptions: {
+        enableImplicitConversion: true, // convierte los datos de la request a los dtos
+      }
     })
   )
 
